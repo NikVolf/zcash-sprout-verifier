@@ -5,6 +5,7 @@ use bn::{pairing, Fr, G1, G2, Group};
 use std::panic::catch_unwind;
 use std::slice;
 
+#[derive(Debug)]
 struct VerifyingKey {
     a: G2,
     b: G1,
@@ -16,6 +17,7 @@ struct VerifyingKey {
     ic: Vec<G1>,
 }
 
+#[derive(Debug)]
 struct Proof {
     a: G1,
     a_prime: G1,
@@ -30,6 +32,10 @@ struct Proof {
 fn verify(vk: &VerifyingKey, primary_input: &[Fr], proof: &Proof) -> bool {
     let p2 = G2::one();
 
+    dbg!(vk);
+    dbg!(primary_input);
+    dbg!(proof);
+
     // 1. compute accumulated input circuit
     let mut acc = vk.ic[0];
     for (&x, &ic) in primary_input.iter().zip(vk.ic[1..].iter()) {
@@ -37,16 +43,20 @@ fn verify(vk: &VerifyingKey, primary_input: &[Fr], proof: &Proof) -> bool {
     }
 
     // 2. check validity of knowledge commitments for A, B, C:
-    pairing(proof.a, vk.a) == pairing(proof.a_prime, p2) &&
-    pairing(vk.b, proof.b) == pairing(proof.b_prime, p2) &&
-    pairing(proof.c, vk.c) == pairing(proof.c_prime, p2) &&
+    let result = pairing(proof.a, vk.a) == pairing(proof.a_prime, p2) &&
+        pairing(vk.b, proof.b) == pairing(proof.b_prime, p2) &&
+        pairing(proof.c, vk.c) == pairing(proof.c_prime, p2) &&
 
     // 3. check same coefficients were used:
-    pairing(proof.k, vk.gamma) ==
-    pairing(acc + proof.a + proof.c, vk.gamma_beta_2) * pairing(vk.gamma_beta_1, proof.b) &&
+        pairing(proof.k, vk.gamma) ==
+        pairing(acc + proof.a + proof.c, vk.gamma_beta_2) * pairing(vk.gamma_beta_1, proof.b) &&
+        // 4. check QAP divisibility
+        pairing(acc + proof.a, proof.b) == pairing(proof.h, vk.z) * pairing(proof.c, p2);
 
-    // 4. check QAP divisibility
-    pairing(acc + proof.a, proof.b) == pairing(proof.h, vk.z) * pairing(proof.c, p2)
+    dbg!(result);
+    ::std::process::exit(1);
+
+    result
 }
 
 #[no_mangle]

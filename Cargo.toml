@@ -13,5 +13,5 @@ categories = ["cryptography"]
 crate-type = ["staticlib"]
 
 [dependencies]
-bn = "0.4"
+bn = { git = "https://github.com/paritytech/bn", branch = "upgrade2" }
 libc = "0.2"
